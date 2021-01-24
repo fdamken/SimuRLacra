@@ -38,7 +38,7 @@ from pyrado.spaces.box import BoxSpace
 from pyrado.tasks.base import Task
 from pyrado.tasks.final_reward import FinalRewTask, FinalRewMode
 from pyrado.tasks.desired_state import RadiallySymmDesStateTask
-from pyrado.tasks.reward_functions import QuadrErrRewFcn
+from pyrado.tasks.reward_functions import QuadrErrRewFcn, QCartPoleSwingUpRewFcn
 
 
 class QCartPoleSim(SimPyEnv, Serializable):
@@ -178,20 +178,20 @@ class QCartPoleSim(SimPyEnv, Serializable):
                 f_c = mu_c * f_normal * np.sign(f_normal * x_dot)
             f_tot = float(f_act - f_c)
 
-        M = np.array(
+        A = np.array(
             [
                 [m_p + self.J_eq, m_p * l_p * cos_th],
                 [m_p * l_p * cos_th, self.J_pole + m_p * l_p ** 2],
             ]
         )
-        rhs = np.array(
+        b = np.array(
             [
                 f_tot - B_eq * x_dot - m_p * l_p * sin_th * th_dot ** 2,
                 -B_p * th_dot - m_p * l_p * g * sin_th,
             ]
         )
-        # Compute acceleration from linear system of equations: M * x_ddot = rhs
-        x_ddot, self._th_ddot = np.linalg.solve(M, rhs)
+        # Compute acceleration from linear system of equations: A * x = b
+        x_ddot, self._th_ddot = np.linalg.solve(A, b)
 
         # Integration step (symplectic Euler)
         self.state[2:] += np.array([float(x_ddot), float(self._th_ddot)]) * self._dt  # next velocity
@@ -423,12 +423,10 @@ class QCartPoleSwingUpSim(QCartPoleSim, Serializable):
     def _create_task(self, task_args: dict) -> Task:
         # Define the task including the reward function
         state_des = task_args.get("state_des", np.array([0.0, np.pi, 0.0, 0.0]))
-        Q = task_args.get("Q", np.diag([3e-1, 5e-1, 5e-3, 1e-3]))
-        R = task_args.get("R", np.diag([1e-3]))
-        rew_fcn = QuadrErrRewFcn(Q, R)
+        rew_fcn = QCartPoleSwingUpRewFcn(factor=0.9)
 
         return FinalRewTask(
             RadiallySymmDesStateTask(self.spec, state_des, rew_fcn, idcs=[1]),
             mode=FinalRewMode(always_negative=True),
-            factor=1e4,
+            factor=0.01,
         )

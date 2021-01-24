@@ -126,6 +126,36 @@ class DomainParam:
         return list(sample_tensor)
 
 
+class ConstantDomainParam(DomainParam):
+    def __init__(self, value: float, **kwargs):
+        """
+        Constructor
+
+        :param value: nominal parameter value
+        """
+        super().__init__(**kwargs)
+        self.value = value
+
+    @staticmethod
+    def get_field_names() -> List[str]:
+        return ["name", "value"]
+
+    def sample(self, num_samples: int = 1) -> List[to.Tensor]:
+        """
+        Generate new domain parameter values.
+
+        :param num_samples: number of samples (sets of new parameter values)
+        :return: list of tensors containing the new parameter values
+        """
+        if not isinstance(num_samples, int):
+            raise pyrado.TypeErr(given=num_samples, expected_type=int)
+        if num_samples <= 0:
+            raise pyrado.ValueErr(given=num_samples, g_constraint="0")
+
+        # Convert the large tensor into a list of small tensors
+        return list(to.tensor([self.value] * num_samples))
+
+
 class UniformDomainParam(DomainParam):
     """ Domain parameter sampled from a normal distribution """
 
@@ -202,7 +232,7 @@ class NormalDomainParam(DomainParam):
 class MultivariateNormalDomainParam(DomainParam):
     """ Domain parameter sampled from a normal distribution """
 
-    def __init__(self, mean: Union[int, float, to.Tensor], cov: Union[list, to.Tensor], **kwargs):
+    def __init__(self, mean: Union[int, float, to.Tensor], cov: to.Tensor, **kwargs):
         """
         Constructor
 
@@ -210,12 +240,11 @@ class MultivariateNormalDomainParam(DomainParam):
         :param cov: covariance
         :param kwargs: forwarded to `DomainParam` constructor
         """
+        assert len(cov.shape) == 2, "Covariance needs to be given as a matrix"
         super().__init__(**kwargs)
 
-        self.mean = to.as_tensor(mean).view(-1)
-        self.cov = to.as_tensor(cov)
-        if not self.cov.ndim == 2:
-            raise pyrado.ShapeErr(msg="The covariance needs to be given as a matrix!")
+        self.mean = to.tensor(mean).view(-1)
+        self.cov = cov
         self.distr = MultivariateNormal(self.mean, self.cov, validate_args=True)
 
     @staticmethod
