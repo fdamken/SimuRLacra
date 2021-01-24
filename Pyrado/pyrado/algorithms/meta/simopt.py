@@ -139,7 +139,8 @@ class SimOpt(InterruptableAlgorithm):
 
         # Save initial environments and the prior
         self.save_snapshot(meta_info=None)
-        joblib.dump(self._subrtn_distr.policy.prior, osp.join(self.save_dir, "prior.pkl"))
+        pyrado.save(self._env_real, "env_real", "pkl", self._save_dir)
+        pyrado.save(self._subrtn_distr.policy.prior, "prior", "pkl", self._save_dir)
 
     @property
     def subroutine_policy(self) -> Algorithm:
@@ -381,7 +382,6 @@ class SimOpt(InterruptableAlgorithm):
         # The subroutines are saving their snapshots during their training
         if meta_info is None:
             # This algorithm instance is not a subroutine of another algorithm
-            joblib.dump(self._env_sim, osp.join(self.save_dir, "env_sim.pkl"))
-            joblib.dump(self._env_real, osp.join(self.save_dir, "env_real.pkl"))
+            pyrado.save(self._env_sim, "env_sim", "pkl", self._save_dir)
         else:
             raise pyrado.ValueErr(msg=f"{self.name} is not supposed be run as a subrtn!")

@@ -27,7 +27,7 @@
 # POSSIBILITY OF SUCH DAMAGE.
 
 """
-Train an agent to solve the Ball-on-Plate environment using Soft Actor-Critic.
+Train an agent to solve the One-Mass-Oscillator environment using Soft Actor-Critic.
 
 .. note::
     The hyper-parameters are not tuned at all!
@@ -39,7 +39,7 @@ import pyrado
 from pyrado.algorithms.step_based.sac import SAC
 from pyrado.environment_wrappers.action_normalization import ActNormWrapper
 from pyrado.environments.pysim.one_mass_oscillator import OneMassOscillatorSim
-from pyrado.logger.experiment import setup_experiment, save_list_of_dicts_to_yaml
+from pyrado.logger.experiment import setup_experiment, save_dicts_to_yaml
 from pyrado.policies.feed_forward.fnn import FNNPolicy
 from pyrado.policies.feed_forward.two_headed_fnn import TwoHeadedFNNPolicy
 from pyrado.spaces import ValueFunctionSpace, BoxSpace
@@ -80,7 +80,7 @@ if __name__ == "__main__":
         max_iter=1000 * env.max_steps,
         memory_size=100 * env.max_steps,
         gamma=0.995,
-        num_batch_updates=1,
+        num_updates_per_step=1,
         tau=0.995,
         ent_coeff_init=0.2,
         learn_ent_coeff=True,
@@ -94,14 +94,12 @@ if __name__ == "__main__":
     algo = SAC(ex_dir, env, policy, qfcn_1, qfcn_2, **algo_hparam)
 
     # Save the hyper-parameters
-    save_list_of_dicts_to_yaml(
-        [
-            dict(env=env_hparams, seed=args.seed),
-            dict(policy=policy_hparam),
-            dict(qfcn=qfcn_hparam),
-            dict(algo=algo_hparam, algo_name=algo.name),
-        ],
-        ex_dir,
+    save_dicts_to_yaml(
+        dict(env=env_hparams, seed=args.seed),
+        dict(policy=policy_hparam),
+        dict(qfcn=qfcn_hparam),
+        dict(algo=algo_hparam, algo_name=algo.name),
+        save_dir=ex_dir,
     )
 
     # Jeeeha

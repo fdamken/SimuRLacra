@@ -97,14 +97,14 @@ class SysIdViaEpisodicRL(Algorithm):
             raise pyrado.TypeErr(given=subrtn.policy, expected_type=DomainDistrParamPolicy)
         if not isinstance(behavior_policy, Policy):
             raise pyrado.TypeErr(given=behavior_policy, expected_type=Policy)
-        if subrtn.policy.num_param != len(subrtn.env.mapping):
+        if subrtn.policy.num_param != len(subrtn.env.dp_mapping):
             raise pyrado.ShapeErr(
                 msg=f"Number of policy parameters {subrtn.policy.num_param} does not match the"
-                f"number of domain distribution parameters {len(subrtn.env.mapping)}!"
+                f"number of domain distribution parameters {len(subrtn.env.dp_mapping)}!"
             )
-        if subrtn.sampler.num_rollouts_per_param != 1:
+        if subrtn.sampler.num_init_states_per_domain != 1:
             # Only sample one rollout in every domain. This is possible since we are synchronizing the init state.
-            raise pyrado.ValueErr(given=subrtn.sampler.num_rollouts_per_param, eq_constraint="1")
+            raise pyrado.ValueErr(given=subrtn.sampler.num_init_states_per_domain, eq_constraint="1")
         if num_rollouts_per_distr < 2:
             raise pyrado.ValueErr(given=num_rollouts_per_distr, g_constraint="1")
         if len(obs_dim_weight) != subrtn.env.obs_space.flat_dim:

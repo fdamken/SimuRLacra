@@ -27,13 +27,19 @@
 # POSSIBILITY OF SUCH DAMAGE.
 
 """
-Train an agent to solve the Qube swing-up task using Policy learning by Weighting Exploration with the Returns.
+Train an agent to solve the WAM Ball-in-cup environment with ball observation/tracking using Policy learning by Weighting Exploration with the Returns.
 """
+import numpy as np
+
+import pyrado
 from pyrado.algorithms.episodic.power import PoWER
-from pyrado.environment_wrappers.action_normalization import ActNormWrapper
-from pyrado.environments.pysim.quanser_qube import QQubeSwingUpSim
+from pyrado.algorithms.meta.udr import UDR
+from pyrado.domain_randomization.domain_parameter import UniformDomainParam, NormalDomainParam
+from pyrado.domain_randomization.domain_randomizer import DomainRandomizer
+from pyrado.environment_wrappers.domain_randomization import DomainRandWrapperLive
+from pyrado.environments.mujoco.wam import WAMBallInCupSim
 from pyrado.logger.experiment import setup_experiment, save_dicts_to_yaml
-from pyrado.policies.special.environment_specific import QQubeSwingUpAndBalanceCtrl
+from pyrado.policies.special.dual_rfb import DualRBFLinearPolicy
 from pyrado.utils.argparser import get_argparser
 
 
@@ -41,35 +47,56 @@ if __name__ == "__main__":
     # Parse command line arguments
     args = get_argparser().parse_args()
 
-    # Experiment (set seed before creating the modules)
-    # ex_dir = setup_experiment(QQubeSwingUpSim.name, f'{PoWER.name}_{LinearPolicy.name}', 'actnorm')
-    ex_dir = setup_experiment(QQubeSwingUpSim.name, f"{PoWER.name}_{QQubeSwingUpAndBalanceCtrl.name}")
+    # Experiment
+    ex_dir = setup_experiment(
+        WAMBallInCupSim.name, f"{UDR.name}-{PoWER.name}_{DualRBFLinearPolicy.name}", "rand-cs-rl-bm-jd-js"
+    )
+
+    # Set seed if desired
+    pyrado.set_seed(args.seed, verbose=True)
 
     # Environment
-    env_hparams = dict(dt=1 / 250.0, max_steps=1500)
-    env = QQubeSwingUpSim(**env_hparams)
-    env = ActNormWrapper(env)
+    env_hparams = dict(
+        num_dof=4,
+        max_steps=1500,
+        fixed_init_state=False,
+        observe_ball=True,
+        task_args=dict(
+            final_factor=500,
+            success_bonus=250,
+            Q=np.diag([0.5, 1e-4, 4e1]),
+            R=np.diag([0, 0, 1e-1, 2e-1]),
+            Q_dev=np.diag([0.0, 0.0, 5]),
+            # R_dev=np.diag([0., 0., 1e-3, 1e-3])
+        ),
+    )
+    env = WAMBallInCupSim(**env_hparams)
+
+    # Randomizer
+    randomizer = DomainRandomizer(
+        UniformDomainParam(name="cup_scale", mean=1.0, halfspan=0.2),
+        NormalDomainParam(name="rope_length", mean=0.3, std=0.005),
+        NormalDomainParam(name="ball_mass", mean=0.021, std=0.001),
+        UniformDomainParam(name="joint_damping", mean=0.05, halfspan=0.05),
+        UniformDomainParam(name="joint_stiction", mean=0.1, halfspan=0.1),
+    )
+    env = DomainRandWrapperLive(env, randomizer)
 
     # Policy
-    # policy_hparam = dict(
-    #     # feats=FeatureStack([RandFourierFeat(env.obs_space.flat_dim, num_feat=20, bandwidth=env.obs_space.bound_up)])
-    #     feats=FeatureStack([identity_feat, sign_feat, abs_feat, squared_feat,
-    #                         MultFeat([2, 5]), MultFeat([3, 5]), MultFeat([4, 5])])
-    # )
-    # policy = LinearPolicy(spec=env.spec, **policy_hparam)
-    policy_hparam = dict(energy_gain=0.587, ref_energy=0.827)
-    policy = QQubeSwingUpAndBalanceCtrl(env.spec, **policy_hparam)
+    bounds = ([0.0, 0.25, 0.5], [1.0, 1.5, 2.5])
+    policy_hparam = dict(rbf_hparam=dict(num_feat_per_dim=9, bounds=bounds, scale=None), dim_mask=2)
+    policy = DualRBFLinearPolicy(env.spec, **policy_hparam)
 
     # Algorithm
     algo_hparam = dict(
-        max_iter=50,
-        pop_size=20,
+        max_iter=15,
+        pop_size=100,
         num_is_samples=10,
-        num_init_states_per_domain=8,
-        expl_std_init=0.5,
+        num_init_states_per_domain=2,
+        num_domains=10,
+        expl_std_init=np.pi / 12,
         expl_std_min=0.02,
-        symm_sampling=False,
-        num_workers=12,
+        num_workers=8,
     )
     algo = PoWER(ex_dir, env, policy, **algo_hparam)
 

@@ -25,29 +25,3 @@
 # IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
 # ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 # POSSIBILITY OF SUCH DAMAGE.
-
-"""
-Continue a training run in the same folder
-"""
-import os.path as osp
-
-from pyrado.algorithms.base import Algorithm
-from pyrado.logger.experiment import ask_for_experiment, load_dict_from_yaml
-from pyrado.utils.argparser import get_argparser
-
-
-if __name__ == "__main__":
-    # Parse command line arguments
-    args = get_argparser().parse_args()
-
-    # Get the experiment's directory to load from
-    ex_dir = ask_for_experiment() if args.dir is None else args.dir
-
-    # Load the
-    hparams = load_dict_from_yaml(osp.join(ex_dir, "hyperparams.yaml"))
-
-    # Load the complete algorithm
-    algo = Algorithm.load_snapshot(ex_dir)
-
-    # Jeeeha
-    algo.train(seed=hparams.get("seed", None))
