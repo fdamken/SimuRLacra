@@ -9,7 +9,7 @@ from pyrado.algorithms.step_based.ppo_gae import PPOGAE
 from pyrado.environment_wrappers.action_normalization import ActNormWrapper
 from pyrado.environments.pysim.quanser_cartpole import QCartPoleSwingUpSim
 from pyrado.policies.feed_forward.fnn import FNNPolicy
-from pyrado.logger.experiment import setup_experiment, save_list_of_dicts_to_yaml
+from pyrado.logger.experiment import setup_experiment, save_dicts_to_yaml
 from pyrado.policies.special.environment_specific import QCartPoleSwingUpAndBalanceCtrl
 from pyrado.utils.argparser import get_argparser
 from pyrado.utils.data_types import EnvSpec
@@ -32,7 +32,7 @@ if __name__ == "__main__":
     pyrado.set_seed(args.seed, verbose=True)
 
     # Environment
-    env_hparams = dict(dt=1 / 300.0)
+    env_hparams = dict(dt=1 / 250.0)
     env = ActNormWrapper(QCartPoleSwingUpSim(**env_hparams))
 
     # Policy
@@ -50,7 +50,7 @@ if __name__ == "__main__":
 
     # Subroutine
     algo_hparam = dict(
-        max_iter=100,
+        max_iter=50,
         tb_name="ppo",
         traj_len=8_000,
         gamma=0.99,
@@ -67,14 +67,12 @@ if __name__ == "__main__":
     algo = PPOGAE(ex_dir, env, policy, critic, **algo_hparam)
 
     # Save the hyper-parameters
-    save_list_of_dicts_to_yaml(
-        [
-            dict(env=env_hparams, seed=args.seed),
-            dict(policy=policy_hparam),
-            dict(critic=critic_hparam),
-            dict(algo=algo_hparam, algo_name=algo.name),
-        ],
-        ex_dir,
+    save_dicts_to_yaml(
+        dict(env=env_hparams, seed=args.seed),
+        dict(policy=policy_hparam),
+        dict(critic=critic_hparam),
+        dict(algo=algo_hparam, algo_name=algo.name),
+        save_dir=ex_dir,
     )
 
     # Jeeeha
