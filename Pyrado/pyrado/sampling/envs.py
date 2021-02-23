@@ -98,7 +98,7 @@ class Envs:
     def ret_and_adv(self):
         """ Calculates the return and advantages in the buffer. """
         self.buf.ret_and_adv()
-        return self.buf.avg_rew()
+        return self.buf.avg_ret()
 
     def get_data(self, device):
         """
