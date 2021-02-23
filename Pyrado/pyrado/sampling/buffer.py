@@ -1,5 +1,5 @@
 import numpy as np
-import torch
+import torch as to 
 from numba import jit, typeof
 from numba import int64, int32, float32
 from numba.experimental import jitclass
@@ -71,16 +71,30 @@ class Buffer:
         self.val_buf[:, self.ptr] = val
         self.ptr += 1
 
-    def avg_rew(self):
-        """ Calculates the average reward achieved. """
-        avg_rews = np.zeros(self.num)
+    def avg_ret(self) -> float:
+        """ Calculates the average return achieved. """
+        avg_rets = np.zeros(self.num)
         for n in range(self.num):
             sections_num = len(self.sections[n]) - 1
             if sections_num == 0:
-                avg_rews[n] = self.rew_buf[n].sum()
+                avg_rets[n] = self.rew_buf[n].sum()
             else:
-                avg_rews[n] = self.rew_buf[n][: self.sections[n][sections_num]].sum() / sections_num
-        return avg_rews.mean()
+                avg_rets[n] = self.rew_buf[n][: self.sections[n][sections_num]].sum() / sections_num
+        return avg_rets.mean()
+
+    def get_rews(self) -> list(np.array):
+        """ Returns a list of all reward trajectories. """
+        rews = []
+        for n in range(self.num):
+            sections_num = len(self.sections[n]) - 1
+            if sections_num == 0:
+                rews.append(self.rew_buf[n])
+            else:
+                start = 0
+                for end in self.sections[n]:
+                    rews.append(self.rew_buf[n][start:end])
+                    start = end
+        return rews
 
     def ret_and_adv(self):
         """ Calculates the return and advantages. """
@@ -104,7 +118,7 @@ class Buffer:
                     self.size - start, self.rew_buf[n][start:], self.val_buf[n][start:], True, self.gamma, self.lam
                 )
 
-    def get_data(self):
+    def get_data(self) -> tuple[to.tensor, to.tensor, to.tensor, to.tensor, to.tensor]:
         """ Get all valid data from the buffers. """
         obs = self.obs_buf[: self.ptr].reshape((-1,) + self.obs_dim)
         act = self.act_buf[: self.ptr].reshape((-1,) + self.act_dim)

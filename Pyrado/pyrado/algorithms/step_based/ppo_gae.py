@@ -83,10 +83,6 @@ class PPOGAE(Algorithm):
         self.obs_dim = self.env.obs_space.flat_dim
         self.act_dim = self.env.act_space.flat_dim
 
-        # Logging
-        self.writer = SummaryWriter(f"{pyrado.TEMP_DIR}/runs/{tb_name}")
-        self.max_avg_rew = float("-inf")
-
         # Other
         self.traj_len = traj_len
         self.cpu_num = cpu_num
@@ -139,7 +135,13 @@ class PPOGAE(Algorithm):
         avg_rew = self.sample_batch()
 
         # Log current progress
-        self.writer.add_scalar("Average reward", avg_rew, self._curr_iter)
+        self.logger.add_value("max return", np.max(rets), 4)
+        self.logger.add_value("median return", np.median(rets), 4)
+        self.logger.add_value("avg return", np.mean(rets), 4)
+        self.logger.add_value("min return", np.min(rets), 4)
+        self.logger.add_value("std return", np.std(rets), 4)
+        self.logger.add_value("avg rollout len", np.mean(all_lengths), 4)
+        self.logger.add_value("num total samples", self._cnt_samples)
         print("Iteration {:3}  Avg Rew: {:3}".format(self._curr_iter, avg_rew))
 
         # Update policy and value function
@@ -159,8 +161,8 @@ class PPOGAE(Algorithm):
                 vals = self.critic(obss).reshape(-1).cpu().numpy()
             obss = self.envs.step(acts, vals)
 
-        avg_rew = self.envs.ret_and_adv()
-        return avg_rew
+        avg_ret = self.envs.ret_and_adv()
+        return avg_ret
 
     def update(self):
         """ Update the policy using PPO. """
