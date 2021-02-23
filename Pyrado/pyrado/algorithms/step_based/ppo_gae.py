@@ -84,7 +84,7 @@ class PPOGAE(Algorithm):
         self.act_dim = self.env.act_space.flat_dim
 
         # Logging
-        self.writer = SummaryWriter(f"runs/{tb_name}")
+        self.writer = SummaryWriter(f"{pyrado.TEMP_DIR}/runs/{tb_name}")
         self.max_avg_rew = float("-inf")
 
         # Other
@@ -191,6 +191,16 @@ class PPOGAE(Algorithm):
             self.optimizer.step()
 
     def save_snapshot(self, meta_info: dict = None):
+        #is meeded for snapshot loading, but crashes
+        #super().save_snapshot(meta_info)
+        
+        pyrado.save(self._expl_strat.policy, "policy", "pt", self.save_dir, meta_info)
+        #pyrado.save(self._critic.vfcn, "vfcn", "pt", self.save_dir, meta_info)
+
+        if meta_info is None:
+            # This algorithm instance is not a subroutine of another algorithm
+            pyrado.save(self.env, "env", "pkl", self.save_dir, meta_info)
+
         to.save(
             {
                 "policy": self.policy.state_dict(),
