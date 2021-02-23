@@ -1,8 +1,9 @@
-import torch
+import torch as to
 import numpy as np
 from multiprocessing import Pipe
 from pyrado.sampling.buffer import Buffer
 from pyrado.sampling.env_worker import Worker
+from pyrado.environments.base import Env
 
 
 class Envs:
@@ -10,7 +11,7 @@ class Envs:
     Central instance to manage all environment workers. Gives them commands in parallel.
     """
 
-    def __init__(self, cpu_num, env_num, env, game_len, gamma, lam):
+    def __init__(self, cpu_num: int, env_num: int, env: Env, game_len: int, gamma: float, lam: float):
         """
         Constructor
 
@@ -53,7 +54,7 @@ class Envs:
         self.obss = np.concatenate(msg, axis=0)
         return self.obss
 
-    def step(self, acts, vals):
+    def step(self, acts: np.ndarray, vals: np.ndarray):
         """
         Executes a step on all workers and returns the results.
 
@@ -95,12 +96,15 @@ class Envs:
         """ Closes all workers and their environments. """
         [c[0].send(["close", None]) for c in self.channels]
 
-    def ret_and_adv(self):
+    def ret_and_adv(self) -> [np.ndarray, np.ndarray]:
         """ Calculates the return and advantages in the buffer. """
         self.buf.ret_and_adv()
-        return self.buf.avg_ret()
+        rews = self.buf.get_rews()
+        rets = np.array([np.sum(r) for r in rews])
+        all_lengths = np.array([len(r) for r in rews])
+        return rets, all_lengths
 
-    def get_data(self, device):
+    def get_data(self, device: to.device):
         """
         Get the buffer data as tensors.
 
@@ -109,7 +113,7 @@ class Envs:
         return to_tensors(self.buf.get_data(), device)
 
 
-def to_tensors(arrays, device):
+def to_tensors(arrays: np.ndarray, device: to.device):
     """
     Converts the array of numpy arrays into an array of tensors.
 
@@ -118,7 +122,7 @@ def to_tensors(arrays, device):
     tensors = []
 
     for a in arrays:
-        tensor = torch.as_tensor(a, dtype=torch.float32).to(device)
+        tensor = to.as_tensor(a, dtype=to.float32).to(device)
         tensors.append(tensor)
 
     return tensors

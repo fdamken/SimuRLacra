@@ -1,4 +1,5 @@
 import numpy as np
+from typing import List, Tuple
 import torch as to 
 from numba import jit, typeof
 from numba import int64, int32, float32
@@ -10,7 +11,7 @@ class Buffer:
     The Buffer stores all relevant information about the sampled trajectoires as numpy arrays.
     """
 
-    def __init__(self, obs_dim: np.array, act_dim: np.array, size: int, gamma: float, lam: float, num: int):
+    def __init__(self, obs_dim: np.ndarray, act_dim: np.ndarray, size: int, gamma: float, lam: float, num: int):
         """
         Constructor
 
@@ -54,7 +55,7 @@ class Buffer:
         self.ptr = 0
         self.sections = [[0] for _ in range(self.num)]
 
-    def store(self, obs: np.array, act: np.array, rew: np.array, val: np.array):
+    def store(self, obs: np.ndarray, act: np.ndarray, rew: np.ndarray, val: np.ndarray):
         """
         Stores a set of information for a single timestep.
 
@@ -82,7 +83,7 @@ class Buffer:
                 avg_rets[n] = self.rew_buf[n][: self.sections[n][sections_num]].sum() / sections_num
         return avg_rets.mean()
 
-    def get_rews(self) -> list(np.array):
+    def get_rews(self) -> List[np.ndarray]:
         """ Returns a list of all reward trajectories. """
         rews = []
         for n in range(self.num):
@@ -91,7 +92,7 @@ class Buffer:
                 rews.append(self.rew_buf[n])
             else:
                 start = 0
-                for end in self.sections[n]:
+                for end in self.sections[n][1:]:
                     rews.append(self.rew_buf[n][start:end])
                     start = end
         return rews
@@ -118,7 +119,7 @@ class Buffer:
                     self.size - start, self.rew_buf[n][start:], self.val_buf[n][start:], True, self.gamma, self.lam
                 )
 
-    def get_data(self) -> tuple[to.tensor, to.tensor, to.tensor, to.tensor, to.tensor]:
+    def get_data(self) -> Tuple[to.Tensor, to.Tensor, to.Tensor, to.Tensor, to.Tensor]:
         """ Get all valid data from the buffers. """
         obs = self.obs_buf[: self.ptr].reshape((-1,) + self.obs_dim)
         act = self.act_buf[: self.ptr].reshape((-1,) + self.act_dim)
@@ -133,7 +134,7 @@ class Buffer:
 
 
 @jit(nopython=True)
-def game_ret(len: int, rew_buf: np.array, gamma: float):
+def game_ret(len: int, rew_buf: np.ndarray, gamma: float):
     """
     Fast return calculation using numba.
 
@@ -148,7 +149,7 @@ def game_ret(len: int, rew_buf: np.array, gamma: float):
 
 
 @jit(nopython=True)
-def adv_estimation(len: int, rews: np.array, vals: np.array, is_end: bool, gamma: float, lam: float):
+def adv_estimation(len: int, rews: np.ndarray, vals: np.ndarray, is_end: bool, gamma: float, lam: float):
     """
     Fast advantage estimation using GAE and numba.
 

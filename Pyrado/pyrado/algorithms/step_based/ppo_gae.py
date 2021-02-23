@@ -132,7 +132,7 @@ class PPOGAE(Algorithm):
 
     def step(self, snapshot_mode: str, meta_info: dict = None):
         # Sample batch
-        avg_rew = self.sample_batch()
+        rets, all_lengths = self.sample_batch()
 
         # Log current progress
         self.logger.add_value("max return", np.max(rets), 4)
@@ -141,16 +141,15 @@ class PPOGAE(Algorithm):
         self.logger.add_value("min return", np.min(rets), 4)
         self.logger.add_value("std return", np.std(rets), 4)
         self.logger.add_value("avg rollout len", np.mean(all_lengths), 4)
-        self.logger.add_value("num total samples", self._cnt_samples)
-        print("Iteration {:3}  Avg Rew: {:3}".format(self._curr_iter, avg_rew))
+        self.logger.add_value("num total samples", np.sum(all_lengths))
 
         # Update policy and value function
         self.update()
 
         # Save snapshot data
-        self.make_snapshot(snapshot_mode, avg_rew, meta_info)
+        self.make_snapshot(snapshot_mode, rets, meta_info)
 
-    def sample_batch(self):
+    def sample_batch(self) -> np.ndarray:
         """ Sample batch of trajectories for training. """
         obss = self.envs.reset()
 
@@ -161,8 +160,8 @@ class PPOGAE(Algorithm):
                 vals = self.critic(obss).reshape(-1).cpu().numpy()
             obss = self.envs.step(acts, vals)
 
-        avg_ret = self.envs.ret_and_adv()
-        return avg_ret
+        rets = self.envs.ret_and_adv()
+        return rets
 
     def update(self):
         """ Update the policy using PPO. """
