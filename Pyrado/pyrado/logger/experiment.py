@@ -291,7 +291,7 @@ def split_path_custom_common(path: Union[str, Experiment]) -> (str, str):
     return custom, common
 
 
-def ask_for_experiment(latest_only: bool = False):
+def ask_for_experiment(latest_only: bool = False, max_display: int = 10):
     """
     Ask for an experiment on the console. This is the go-to entry point for evaluation scripts.
 
@@ -322,6 +322,7 @@ def ask_for_experiment(latest_only: bool = False):
         item_formatter=lambda exp: f"({exp.timestamp}) {exp.prefix}",
         header="Available experiments:",
         footer="Enter experiment number or a partial path to an experiment.",
+        max_display = max_display
     )
 
 

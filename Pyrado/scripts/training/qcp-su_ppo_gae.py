@@ -32,7 +32,7 @@ if __name__ == "__main__":
     pyrado.set_seed(args.seed, verbose=True)
 
     # Environment
-    env_hparams = dict(dt=1 / 250.0)
+    env_hparams = dict(dt=1 / 250.0, max_steps=8_000)
     env = ActNormWrapper(QCartPoleSwingUpSim(**env_hparams))
 
     # Policy
@@ -41,8 +41,8 @@ if __name__ == "__main__":
 
     # Reduce weights of last layer, recommended by paper
     for p in policy.net.output_layer.parameters():
-            with to.no_grad():
-                p /= 100
+        with to.no_grad():
+            p /= 100
 
     # Critic
     critic_hparam = dict(hidden_sizes=[64, 64], hidden_nonlin=to.relu)
@@ -50,13 +50,13 @@ if __name__ == "__main__":
 
     # Subroutine
     algo_hparam = dict(
-        max_iter=50,
+        max_iter=5,
         tb_name="ppo",
         traj_len=8_000,
         gamma=0.99,
         lam=0.97,
         env_num=9,
-        cpu_num=mp.cpu_count()-1,
+        cpu_num=max(9,mp.cpu_count()-1),
         epoch_num=40,
         device="cpu",
         max_kl=0.05,
@@ -77,3 +77,4 @@ if __name__ == "__main__":
 
     # Jeeeha
     algo.train(snapshot_mode="latest", seed=args.seed)
+    

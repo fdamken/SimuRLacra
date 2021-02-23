@@ -192,6 +192,16 @@ class PPOGAE(Algorithm):
             self.optimizer.step()
 
     def save_snapshot(self, meta_info: dict = None):
+        #is meeded for snapshot loading, but crashes
+        #super().save_snapshot(meta_info)
+        
+        pyrado.save(self._expl_strat.policy, "policy", "pt", self.save_dir, meta_info)
+        #pyrado.save(self._critic.vfcn, "vfcn", "pt", self.save_dir, meta_info)
+
+        if meta_info is None:
+            # This algorithm instance is not a subroutine of another algorithm
+            pyrado.save(self.env, "env", "pkl", self.save_dir, meta_info)
+
         to.save(
             {
                 "policy": self.policy.state_dict(),
