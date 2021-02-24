@@ -196,6 +196,12 @@ class PPOGAE(Algorithm):
 
             self.optimizer.step()
 
+    def train(self, snapshot_mode: str = "latest", seed: int = None, meta_info: dict = None):
+        super().train(snapshot_mode, seed, meta_info)
+        
+        # Close environments
+        self.envs.close()
+
     def save_snapshot(self, meta_info: dict = None):
         super().save_snapshot(meta_info)
 
