@@ -95,6 +95,8 @@ class Buffer:
                 for end in self.sections[n][1:]:
                     rews.append(self.rew_buf[n][start:end])
                     start = end
+                if self.sections[n][-1] != self.size:
+                    rews.append(self.rew_buf[n][self.sections[n][-1]:])
         return rews
 
     def ret_and_adv(self):

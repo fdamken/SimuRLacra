@@ -50,7 +50,7 @@ if __name__ == "__main__":
 
     # Subroutine
     algo_hparam = dict(
-        max_iter=5,
+        max_iter=50,
         tb_name="ppo",
         traj_len=8_000,
         gamma=0.99,
@@ -76,5 +76,5 @@ if __name__ == "__main__":
     )
 
     # Jeeeha
-    algo.train(snapshot_mode="latest", seed=args.seed)
+    algo.train(snapshot_mode="best", seed=args.seed)
     

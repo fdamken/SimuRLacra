@@ -5,6 +5,8 @@ import os
 import numpy as np
 import pyrado
 import torch as to
+from copy import deepcopy
+
 from pyrado.algorithms.base import Algorithm
 from pyrado.environments.base import Env
 from pyrado.logger.step import StepLogger
@@ -79,11 +81,14 @@ class PPOGAE(Algorithm):
 
         # Environment
         self.env = env
+        self.env_num = env_num
         self.envs = Envs(cpu_num, env_num, env, traj_len, gamma, lam)
         self.obs_dim = self.env.obs_space.flat_dim
         self.act_dim = self.env.act_space.flat_dim
 
         # Other
+        self.gamma = gamma
+        self.lam = lam
         self.traj_len = traj_len
         self.cpu_num = cpu_num
         self.epoch_num = epoch_num
@@ -147,7 +152,7 @@ class PPOGAE(Algorithm):
         self.update()
 
         # Save snapshot data
-        self.make_snapshot(snapshot_mode, rets, meta_info)
+        self.make_snapshot(snapshot_mode, np.mean(rets), meta_info)
 
     def sample_batch(self) -> np.ndarray:
         """ Sample batch of trajectories for training. """
@@ -192,27 +197,34 @@ class PPOGAE(Algorithm):
             self.optimizer.step()
 
     def save_snapshot(self, meta_info: dict = None):
-        #is meeded for snapshot loading, but crashes
-        #super().save_snapshot(meta_info)
-        
+        super().save_snapshot(meta_info)
+
         pyrado.save(self._expl_strat.policy, "policy", "pt", self.save_dir, meta_info)
-        #pyrado.save(self._critic.vfcn, "vfcn", "pt", self.save_dir, meta_info)
+        pyrado.save(self.critic, "vfcn", "pt", self.save_dir, meta_info)
 
         if meta_info is None:
             # This algorithm instance is not a subroutine of another algorithm
             pyrado.save(self.env, "env", "pkl", self.save_dir, meta_info)
 
-        to.save(
-            {
-                "policy": self.policy.state_dict(),
-                "critic": self.critic.state_dict(),
-                "expl_strat": self.expl_strat.state_dict(),
-            },
-            f"{self._save_name}.pt",
-        )
+    def __getstate__(self):
+        self.envs
+        # Remove the unpickleable elements from this algorithm instance
+        tmp_envs = self.__dict__.pop("envs")
 
-    def load_snapshot(self, load_dir: str, load_name: str = "algo"):
-        checkpoint = to.load(f"{load_dir}/{load_name}.pt")
-        self.policy.load_state_dict(checkpoint["policy"])
-        self.critic.load_state_dict(checkpoint["critic"])
-        self.expl_strat.load_state_dict(checkpoint["expl_strat"])
+        # Call Algorithm's __getstate__() without the unpickleable elements
+        state_dict = super(PPOGAE, self).__getstate__()
+
+        # Make a deep copy of the state dict such that we can return the pickleable version
+        state_dict_copy = deepcopy(state_dict)
+
+        # Insert them back
+        self.__dict__["envs"] = tmp_envs
+
+        return state_dict_copy
+
+    def __setstate__(self, state):
+        # Call Algorithm's __setstate__()
+        super().__setstate__(state)
+
+        # Recover settings of environment
+        self.envs = Envs(state["cpu_num"], state["env_num"], state["env"], state["traj_len"], state["gamma"], state["lam"])
