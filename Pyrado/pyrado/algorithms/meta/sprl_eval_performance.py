@@ -401,7 +401,7 @@ class SPRL(Algorithm):
         values = to.tensor([ro.undiscounted_return() for rollouts in rollouts_all for ro in rollouts])
 
         if self._last_performance_estimate:
-            training_perf = contexts_old_log_prob * values
+            training_perf = to.exp(contexts_old_log_prob) * values
             self.logger.add_value(
                 f"Mean Divergence from estimated performance", to.mean(training_perf - self._last_performance_estimate)
             )
