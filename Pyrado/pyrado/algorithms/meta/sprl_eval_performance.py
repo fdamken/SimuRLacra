@@ -333,6 +333,8 @@ class SPRL(Algorithm):
 
         self._last_performance_estimate: Optional[to.Tensor] = None
         self.logger.add_value(f"Mean Divergence from estimated performance", 0)
+        self.logger.add_value(f"Predicted performance", 0)
+        self.logger.add_value(f"Actual performance", 0)
 
     @property
     def sub_algorithm(self) -> Algorithm:
@@ -403,6 +405,8 @@ class SPRL(Algorithm):
             self.logger.add_value(
                 f"Mean Divergence from estimated performance", to.mean(training_perf - self._last_performance_estimate)
             )
+            self.logger.add_value(f"Predicted performance", self._last_performance_estimate)
+            self.logger.add_value(f"Actual performance", to.mean(training_perf))
 
         def kl_constraint_fn(x):
             """Compute the constraint for the KL-divergence between current and proposed distribution."""
