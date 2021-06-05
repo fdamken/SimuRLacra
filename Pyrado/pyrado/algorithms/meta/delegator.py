@@ -41,7 +41,6 @@ class Delegator(Algorithm):
         self._subroutine = subroutine
 
     def step(self, *args, **kwargs):
-        self._subroutine.reset()
         self._subroutine.train(*args, **kwargs)
 
     def reset(self, *args, **kwargs):
