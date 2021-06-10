@@ -101,6 +101,7 @@ if __name__ == "__main__":
         lr=5e-4,
         max_grad_norm=1.5,
         num_workers=8,
+        eval_intvl=1,
         lr_scheduler=lr_scheduler.ExponentialLR,
         lr_scheduler_hparam=dict(gamma=0.999),
     )
